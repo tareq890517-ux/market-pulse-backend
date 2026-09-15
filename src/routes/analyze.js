@@ -6,7 +6,7 @@ const router = express.Router();
 const FREE_LIMIT = 3;
 
 const SYSTEM_PROMPT = `أنت محلل فني للأسواق المالية. ستستلم صورة شارت تداول (كريبتو أو فوركس أو أسهم).
-حلّل الصورة وأجب فقط بكائن JSON صالح بالصيغة التالية بالضبط، بدون أي نص إضافي ولا Markdown:
+حلّل الصورة وأجب فقط بكائن JSON صالح بالصيغة التالية بالضبط، بدون أي نص إضافي ولا Markdown، وبدون علامات الاقتباس الثلاثية:
 {
   "pattern": "اسم النمط الفني المكتشف بالعربية",
   "trend": "الاتجاه العام بالعربية (صاعد / هابط / عرضي) مع وصف قصير",
@@ -36,4 +36,45 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   try {
-    const response = await fetch('
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: SYSTEM_PROMPT + '\n\nحلّل هذا الشارت وأعد النتيجة بصيغة JSON فقط.' },
+                { inline_data: { mime_type: mediaType || 'image/png', data: imageBase64 } },
+              ],
+            },
+          ],
+        }),
+      }
+    );
+
+    const data = await geminiRes.json();
+    if (!geminiRes.ok) {
+      console.error('خطأ من Gemini API:', data);
+      return res.status(502).json({ error: 'تعذّر تحليل الصورة حالياً' });
+    }
+
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const clean = rawText.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    db.prepare('UPDATE users SET analysis_count = analysis_count + 1 WHERE id = ?').run(user.id);
+    const updated = db.prepare('SELECT analysis_count, is_subscribed FROM users WHERE id = ?').get(user.id);
+
+    res.json({
+      analysis: parsed,
+      remaining: updated.is_subscribed ? null : Math.max(FREE_LIMIT - updated.analysis_count, 0),
+    });
+  } catch (err) {
+    console.error('فشل تحليل الشارت:', err.message);
+    res.status(500).json({ error: 'حدث خطأ غير متوقع أثناء التحليل' });
+  }
+});
+
+module.exports = router;
