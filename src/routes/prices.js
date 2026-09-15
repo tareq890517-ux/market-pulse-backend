@@ -38,4 +38,8 @@ router.get('/', async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('فشل جلب الأسعار الحية:', err.message);
-    res.status(502).json({ error: 'ت
+    res.status(502).json({ error: 'تعذّر الاتصال بمصدر الأسعار حالياً، حاول لاحقاً' });
+  }
+});
+
+module.exports = router;
