@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبض السوق</title>
+<style>
+:root{--bg:#0E1A22;--el:#142530;--el2:#1B2F3C;--ln:#26404F;--tx:#E7EEF2;--dim:#8FA6B2;--am:#D9A441;--gr:#4CAF7D;--rd:#D9615C}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:sans-serif;line-height:1.6}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--ln)}
+h1{font-size:18px}
+.tick-wrap{overflow:hidden;white-space:nowrap;padding:8px 0;background:var(--el);border-bottom:1px solid var(--ln)}
+.tick{display:inline-flex;gap:30px;animation:sc 30s linear infinite;padding-right:100%}
+@keyframes sc{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+main{max-width:700px;margin:0 auto;padding:24px 16px}
+.box{border:1px solid var(--ln);background:var(--el);padding:20px;margin-bottom:20px}
+h2{font-size:18px;margin-bottom:6px}
+p.sub{color:var(--dim);font-size:13px;margin-bottom:16px}
+.up{border:1.5px dashed var(--ln);padding:30px;text-align:center;cursor:pointer}
+input,button{width:100%;background:var(--bg);border:1px solid var(--ln);color:var(--tx);padding:10px;margin-bottom:10px;font-size:14px}
+button{background:var(--am);color:#141008;font-weight:600;border:none;cursor:pointer}
+.gate{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;align-items:center;justify-content:center;padding:20px}
+.hide{display:none}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--ln);font-size:14px}
+.err{color:var(--rd);font-size:12px;margin-top:8px}
+img#pv{width:100%;max-height:200px;object-fit:contain;margin-bottom:10px}
+a{color:var(--am)}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="box" style="width:100%;max-width:360px">
+    <h2 id="aT">إنشاء حساب</h2>
+    <p class="sub" id="aS">3 تحليلات مجانية</p>
+    <div id="nameF"><input id="nm" placeholder="الاسم"></div>
+    <input id="em" placeholder="البريد الإلكتروني" type="email">
+    <input id="pw" placeholder="كلمة المرور" type="password">
+    <button id="go">إنشاء الحساب</button>
+    <div class="err hide" id="er"></div>
+    <p class="sub"><span id="tt">لديك حساب؟</span> <a href="#" id="tg">دخول</a></p>
+  </div>
+</div>
+
+<div id="app" class="hide">
+<header>
+  <h1>نبض السوق</h1>
+  <div>
+    <span id="who" style="font-size:13px;color:var(--dim)"></span>
+    <button id="out" style="width:auto;background:none;color:var(--dim);text-decoration:underline;padding:4px">خروج</button>
+  </div>
+</header>
+<div class="tick-wrap"><div class="tick" id="tk">جاري التحميل...</div></div>
+
+<main>
+  <div class="box">
+    <h2>حلّل الشارت</h2>
+    <p class="sub" id="usage"></p>
+    <div class="up" id="up">اضغط لرفع صورة الشارت</div>
+    <input type="file" id="fi" accept="image/*" class="hide">
+    <img id="pv" class="hide">
+    <button id="an" class="hide">حلّل الآن</button>
+    <div id="pay" class="hide box" style="margin-top:10px;text-align:center">
+      <p>انتهت تحليلاتك المجانية</p>
+      <button onclick="alert('صفحة الاشتراك قريباً')">اشترك</button>
+    </div>
+    <div id="load" class="hide sub">جاري التحليل...</div>
+    <div id="res" class="hide"></div>
+  </div>
+</main>
+</div>
+
+<script>
+const API = '';
+let token = null, uc = 0, sub = false, img = null, mt = 'image/png', login = false;
+
+const gate=document.getElementById('gate'), app=document.getElementById('app');
+const er=document.getElementById('er');
+
+document.getElementById('tg').onclick = e => {
+  e.preventDefault();
+  login = !login;
+  document.getElementById('nameF').style.display = login ? 'none' : 'block';
+  document.getElementById('aT').textContent = login ? 'تسجيل الدخول' : 'إنشاء حساب';
+  document.getElementById('go').textContent = login ? 'دخول' : 'إنشاء الحساب';
+  document.getElementById('tt').textContent = login ? 'ما عندك حساب؟' : 'لديك حساب؟';
+  document.getElementById('tg').textContent = login ? 'إنشاء حساب' : 'دخول';
+};
+
+async function check(){
+  try{
+    const r = await window.storage.get('tok', false);
+    if(r && r.value){
+      token = r.value;
+      const m = await fetch(API+'/api/me',{headers:{Authorization:'Bearer '+token}});
+      if(m.ok){ showApp(await m.json()); return; }
+    }
+  }catch(e){}
+  gate.style.display='flex'; app.classList.add('hide');
+}
+
+function showApp(u){
+  gate.style.display='none'; app.classList.remove('hide');
+  document.getElementById('who').textContent = u.name;
+  uc = u.analysis_count; sub = u.is_subscribed;
+  renderU();
+}
+
+document.getElementById('go').onclick = async ()=>{
+  er.classList.add('hide');
+  const name=document.getElementById('nm').value.trim();
+  const email=document.getElementById('em').value.trim();
+  const pw=document.getElementById('pw').value;
+  if(!email||!pw||(!login&&!name)){ er.textContent='عبّئ كل الحقول'; er.classList.remove('hide'); return; }
+  try{
+    const ep = login?'/api/auth/login':'/api/auth/signup';
+    const body = login?{email,password:pw}:{name,email,password:pw};
+    const r = await fetch(API+ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    if(!r.ok){ er.textContent=d.error||'خطأ'; er.classList.remove('hide'); return; }
+    token=d.token;
+    try{await window.storage.set('tok',token,false);}catch(e){}
+    showApp(d.user);
+  }catch(e){ er.textContent='تعذّر الاتصال بالسيرفر'; er.classList.remove('hide'); }
+};
+
+document.getElementById('out').onclick = async ()=>{
+  try{await window.storage.delete('tok',false);}catch(e){}
+  token=null; app.classList.add('hide'); gate.style.display='flex';
+};
+
+function renderU(){
+  document.getElementById('usage').textContent = sub ? 'اشتراك نشط' : `${Math.max(3-uc,0)} من 3 تحليلات متبقية`;
+}
+
+document.getElementById('up').onclick = ()=> document.getElementById('fi').click();
+document.getElementById('fi').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  mt = f.type;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    img = rd.result.split(',')[1];
+    document.getElementById('pv').src = rd.result;
+    document.getElementById('pv').classList.remove('hide');
+    document.getElementById('an').classList.remove('hide');
+    document.getElementById('up').classList.add('hide');
+    document.getElementById('res').classList.add('hide');
+  };
+  rd.readAsDataURL(f);
+};
+
+document.getElementById('an').onclick = async ()=>{
+  document.getElementById('load').classList.remove('hide');
+  document.getElementById('res').classList.add('hide');
+  document.getElementById('pay').classList.add('hide');
+  try{
+    const r = await fetch(API+'/api/analyze',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({imageBase64:img,mediaType:mt})});
+    const d = await r.json();
+    if(r.status===402){ document.getElementById('load').classList.add('hide'); document.getElementById('pay').classList.remove('hide'); return; }
+    if(!r.ok) throw new Error(d.error);
+    if(typeof d.remaining==='number') uc = 3-d.remaining;
+    renderU();
+    const p = d.analysis;
+    document.getElementById('res').innerHTML = `
+      <div class="row"><span>النمط</span><b>${p.pattern||'-'}</b></div>
+      <div class="row"><span>الاتجاه</span><b>${p.trend||'-'}</b></div>
+      <div class="row"><span>دعم/مقاومة</span><b>${p.support||'-'} / ${p.resistance||'-'}</b></div>
+      <div class="row"><span>مخاطرة:عائد</span><b>${p.risk_reward||'-'}</b></div>
+      <div class="row"><span>الثقة</span><b>${p.confidence||'-'}</b></div>
+    `;
+    document.getElementById('load').classList.add('hide');
+    document.getElementById('res').classList.remove('hide');
+  }catch(e){
+    document.getElementById('load').classList.add('hide');
+    document.getElementById('res').classList.remove('hide');
+    document.getElementById('res').textContent = 'تعذّر التحليل، حاول مرة أخرى (قد يكون السيرفر يستيقظ، انتظر دقيقة)';
+  }
+};
+
+async function ticker(){
+  try{
+    const r = await fetch(API+'/api/prices');
+    const d = await r.json();
+    const all = [...(d.crypto||[]),...(d.forex||[])];
+    const html = all.map(x=>`<span>${x.symbol} ${x.price.toLocaleString()}</span>`).join(' &nbsp; ');
+    document.getElementById('tk').innerHTML = html + ' &nbsp; ' + html;
+  }catch(e){
+    document.getElementById('tk').textContent = 'تعذّر جلب الأسعار';
+  }
+}
+
+check();
+ticker();
+setInterval(ticker,60000);
+</script>
+</body>
+</html
