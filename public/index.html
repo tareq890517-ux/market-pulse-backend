@@ -166,8 +166,12 @@ document.getElementById('an').onclick = async ()=>{
       <div class="row"><span>النمط</span><b>${p.pattern||'-'}</b></div>
       <div class="row"><span>الاتجاه</span><b>${p.trend||'-'}</b></div>
       <div class="row"><span>دعم/مقاومة</span><b>${p.support||'-'} / ${p.resistance||'-'}</b></div>
+      <div class="row"><span>دخول مقترح</span><b>${p.entry||'-'}</b></div>
+      <div class="row"><span>وقف الخسارة</span><b style="color:var(--rd)">${p.stop_loss||'-'}</b></div>
+      <div class="row"><span>جني الأرباح</span><b style="color:var(--gr)">${p.take_profit||'-'}</b></div>
+      <div class="row"><span>درجة الخطورة</span><b>${p.risk_level||'-'}</b></div>
       <div class="row"><span>مخاطرة:عائد</span><b>${p.risk_reward||'-'}</b></div>
-      <div class="row"><span>الثقة</span><b>${p.confidence||'-'}</b></div>
+      <div class="row"><span>ثقة النمط</span><b>${p.confidence||'-'}</b></div>
     `;
     document.getElementById('load').classList.add('hide');
     document.getElementById('res').classList.remove('hide');
@@ -195,4 +199,4 @@ ticker();
 setInterval(ticker,60000);
 </script>
 </body>
-</html
+</html>
