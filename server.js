@@ -10,7 +10,7 @@ const meRoutes = require('./src/routes/me');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // نسمح بحجم أكبر لأن صور الشارت تُرسَل base64
-
+app.use(express.static(require('path').join(__dirname, 'public')));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
