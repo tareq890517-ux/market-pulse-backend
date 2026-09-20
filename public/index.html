@@ -197,15 +197,42 @@ document.getElementById('addSlot').onclick = () => {
   document.getElementById('fi').click();
 };
 
-document.getElementById('fi').onchange = e => {
+// نضغط الصورة قبل الإرسال (أبعاد أصغر + جودة JPEG معقولة) لتفادي تجاوز حجم الطلب
+// عند رفع عدة فريمات مع بعض
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        const maxW = 1280;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('fi').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => {
-    frames.push({ label: '1h', base64: rd.result.split(',')[1], mediaType: f.type, name: f.name });
+  try{
+    const { base64, mediaType } = await compressImage(f);
+    frames.push({ label: '1h', base64, mediaType, name: f.name });
     renderSlots();
     document.getElementById('res').classList.add('hide');
-  };
-  rd.readAsDataURL(f);
+  }catch(err){
+    alert('تعذّر معالجة الصورة، جرّب صورة أخرى');
+  }
   e.target.value = '';
 };
 
@@ -250,44 +277,4 @@ async function ticker(){
     const r = await fetch(API+'/api/prices');
     const d = await r.json();
     const all = [...(d.crypto||[]),...(d.forex||[])];
-    const html = all.map(x=>`<span>${x.symbol} ${x.price.toLocaleString()}</span>`).join(' &nbsp; ');
-    document.getElementById('tk').innerHTML = html + ' &nbsp; ' + html;
-  }catch(e){
-    document.getElementById('tk').textContent = 'تعذّر جلب الأسعار';
-  }
-}
-
-const WALLETS = {
-  BTC: '12QcTFBrWsd2YSrRdoZVbnNdJDGVsdo91Z',
-  USDT: '0x827ed8494712c2b1bba8d0ca336c961220bab24f'
-};
-
-function updateWalletDisplay(){
-  const method = document.getElementById('methodSel').value;
-  document.getElementById('walletLabel').textContent = method === 'BTC' ? 'عنوان محفظة BTC:' : 'عنوان محفظة USDT (BEP20):';
-  document.getElementById('walletAddr').textContent = WALLETS[method];
-}
-document.getElementById('methodSel').addEventListener('change', updateWalletDisplay);
-updateWalletDisplay();
-
-document.getElementById('submitPay').onclick = async ()=>{
-  const method = document.getElementById('methodSel').value;
-  const tx_hash = document.getElementById('txHash').value.trim();
-  const msg = document.getElementById('payMsg');
-  if(!tx_hash){ msg.textContent = 'أدخل رقم عملية التحويل'; msg.style.color = 'var(--rd)'; return; }
-  try{
-    const r = await fetch(API+'/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({method,tx_hash})});
-    const d = await r.json();
-    if(!r.ok){ msg.textContent = d.error||'خطأ'; msg.style.color = 'var(--rd)'; return; }
-    msg.textContent = d.message;
-    msg.style.color = 'var(--gr)';
-    document.getElementById('txHash').value = '';
-  }catch(e){ msg.textContent = 'تعذّر الاتصال بالسيرفر'; msg.style.color = 'var(--rd)'; }
-};
-
-check();
-ticker();
-setInterval(ticker,60000);
-</script>
-</body>
-</html>
+    const html = all.map
