@@ -71,9 +71,30 @@ a{color:var(--am)}
 
     <button id="an" style="margin-top:12px">حلّل الآن</button>
 
-    <div id="pay" class="hide box" style="margin-top:10px;text-align:center">
-      <p>انتهت تحليلاتك المجانية</p>
-      <button onclick="alert('صفحة الاشتراك قريباً')">اشترك</button>
+    <div id="pay" class="hide box" style="margin-top:10px">
+      <p style="text-align:center;margin-bottom:14px">انتهت تحليلاتك المجانية — اشترك للمتابعة</p>
+
+      <select id="planSel">
+        <option value="1m">شهر واحد — 20$</option>
+        <option value="2m">شهرين — 35$</option>
+        <option value="6m">ستة أشهر — 80$</option>
+        <option value="1y">سنة كاملة — 150$</option>
+      </select>
+
+      <select id="methodSel">
+        <option value="BTC">الدفع بـ Bitcoin (BTC)</option>
+        <option value="USDT">الدفع بـ USDT (BEP20)</option>
+      </select>
+
+      <div class="box" style="background:var(--bg);word-break:break-all;font-size:12px;margin-bottom:10px">
+        <div id="walletLabel" style="color:var(--dim);margin-bottom:4px">عنوان محفظة BTC:</div>
+        <div id="walletAddr" style="color:var(--am)"></div>
+      </div>
+      <p class="sub">حوّل المبلغ المطابق للباقة المختارة للعنوان أعلاه، ثم أدخل رقم عملية التحويل (Transaction Hash) بالأسفل.</p>
+
+      <input id="txHash" placeholder="رقم عملية التحويل (Tx Hash)">
+      <button id="submitPay">إرسال طلب التفعيل</button>
+      <div id="payMsg" class="sub" style="margin-top:8px"></div>
     </div>
     <div id="load" class="hide sub">جاري التحليل...</div>
     <div id="res" class="hide"></div>
@@ -236,6 +257,34 @@ async function ticker(){
     document.getElementById('tk').textContent = 'تعذّر جلب الأسعار';
   }
 }
+
+const WALLETS = {
+  BTC: '12QcTFBrWsd2YSrRdoZVbnNdJDGVsdo91Z',
+  USDT: '0x827ed8494712c2b1bba8d0ca336c961220bab24f'
+};
+
+function updateWalletDisplay(){
+  const method = document.getElementById('methodSel').value;
+  document.getElementById('walletLabel').textContent = method === 'BTC' ? 'عنوان محفظة BTC:' : 'عنوان محفظة USDT (BEP20):';
+  document.getElementById('walletAddr').textContent = WALLETS[method];
+}
+document.getElementById('methodSel').addEventListener('change', updateWalletDisplay);
+updateWalletDisplay();
+
+document.getElementById('submitPay').onclick = async ()=>{
+  const method = document.getElementById('methodSel').value;
+  const tx_hash = document.getElementById('txHash').value.trim();
+  const msg = document.getElementById('payMsg');
+  if(!tx_hash){ msg.textContent = 'أدخل رقم عملية التحويل'; msg.style.color = 'var(--rd)'; return; }
+  try{
+    const r = await fetch(API+'/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({method,tx_hash})});
+    const d = await r.json();
+    if(!r.ok){ msg.textContent = d.error||'خطأ'; msg.style.color = 'var(--rd)'; return; }
+    msg.textContent = d.message;
+    msg.style.color = 'var(--gr)';
+    document.getElementById('txHash').value = '';
+  }catch(e){ msg.textContent = 'تعذّر الاتصال بالسيرفر'; msg.style.color = 'var(--rd)'; }
+};
 
 check();
 ticker();
