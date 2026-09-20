@@ -7,6 +7,7 @@ const pricesRoutes = require('./src/routes/prices');
 const analyzeRoutes = require('./src/routes/analyze');
 const meRoutes = require('./src/routes/me');
 const adminRoutes = require('./src/routes/admin');
+const subscribeRoutes = require('./src/routes/subscribe');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // نسمح بحجم أكبر لأن صور الشارت تُرسَل base64
@@ -18,6 +19,7 @@ app.use('/api/prices', pricesRoutes);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/subscribe', subscribeRoutes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ السيرفر يعمل على http://localhost:${PORT}`);
