@@ -60,4 +60,17 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       user: {
-        id: user.id
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        is_subscribed: !!user.is_subscribed,
+        analysis_count: user.analysis_count,
+      },
+    });
+  } catch (err) {
+    console.error('خطأ الدخول:', err.message);
+    res.status(500).json({ error: 'حدث خطأ غير متوقع، حاول مرة أخرى' });
+  }
+});
+
+module.exports = router;
