@@ -140,12 +140,18 @@ function showApp(u){
   renderU();
 }
 
-document.getElementById('go').onclick = async ()=>{
+const goBtn = document.getElementById('go');
+goBtn.onclick = async ()=>{
   er.classList.add('hide');
   const name=document.getElementById('nm').value.trim();
   const email=document.getElementById('em').value.trim();
   const pw=document.getElementById('pw').value;
   if(!email||!pw||(!login&&!name)){ er.textContent='عبّئ كل الحقول'; er.classList.remove('hide'); return; }
+
+  const originalText = goBtn.textContent;
+  goBtn.disabled = true;
+  goBtn.textContent = 'جاري الاتصال بالسيرفر... (قد يستغرق حتى 50 ثانية عند أول استخدام)';
+
   try{
     const ep = login?'/api/auth/login':'/api/auth/signup';
     const body = login?{email,password:pw}:{name,email,password:pw};
@@ -155,7 +161,11 @@ document.getElementById('go').onclick = async ()=>{
     token=d.token;
     try{localStorage.setItem('tok',token);}catch(e){}
     showApp(d.user);
-  }catch(e){ er.textContent='تعذّر الاتصال بالسيرفر'; er.classList.remove('hide'); }
+  }catch(e){ er.textContent='تعذّر الاتصال بالسيرفر، تأكد من الإنترنت وحاول مرة أخرى'; er.classList.remove('hide'); }
+  finally{
+    goBtn.disabled = false;
+    goBtn.textContent = originalText;
+  }
 };
 
 document.getElementById('out').onclick = async ()=>{
@@ -197,8 +207,6 @@ document.getElementById('addSlot').onclick = () => {
   document.getElementById('fi').click();
 };
 
-// نضغط الصورة قبل الإرسال (أبعاد أصغر + جودة JPEG معقولة) لتفادي تجاوز حجم الطلب
-// عند رفع عدة فريمات مع بعض
 function compressImage(file){
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -277,4 +285,44 @@ async function ticker(){
     const r = await fetch(API+'/api/prices');
     const d = await r.json();
     const all = [...(d.crypto||[]),...(d.forex||[])];
-    const html = all.map
+    const html = all.map(x=>`<span>${x.symbol} ${x.price.toLocaleString()}</span>`).join(' &nbsp; ');
+    document.getElementById('tk').innerHTML = html + ' &nbsp; ' + html;
+  }catch(e){
+    document.getElementById('tk').textContent = 'تعذّر جلب الأسعار';
+  }
+}
+
+const WALLETS = {
+  BTC: '12QcTFBrWsd2YSrRdoZVbnNdJDGVsdo91Z',
+  USDT: '0x827ed8494712c2b1bba8d0ca336c961220bab24f'
+};
+
+function updateWalletDisplay(){
+  const method = document.getElementById('methodSel').value;
+  document.getElementById('walletLabel').textContent = method === 'BTC' ? 'عنوان محفظة BTC:' : 'عنوان محفظة USDT (BEP20):';
+  document.getElementById('walletAddr').textContent = WALLETS[method];
+}
+document.getElementById('methodSel').addEventListener('change', updateWalletDisplay);
+updateWalletDisplay();
+
+document.getElementById('submitPay').onclick = async ()=>{
+  const method = document.getElementById('methodSel').value;
+  const tx_hash = document.getElementById('txHash').value.trim();
+  const msg = document.getElementById('payMsg');
+  if(!tx_hash){ msg.textContent = 'أدخل رقم عملية التحويل'; msg.style.color = 'var(--rd)'; return; }
+  try{
+    const r = await fetch(API+'/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({method,tx_hash})});
+    const d = await r.json();
+    if(!r.ok){ msg.textContent = d.error||'خطأ'; msg.style.color = 'var(--rd)'; return; }
+    msg.textContent = d.message;
+    msg.style.color = 'var(--gr)';
+    document.getElementById('txHash').value = '';
+  }catch(e){ msg.textContent = 'تعذّر الاتصال بالسيرفر'; msg.style.color = 'var(--rd)'; }
+};
+
+check();
+ticker();
+setInterval(ticker,60000);
+</script>
+</body>
+</html>
