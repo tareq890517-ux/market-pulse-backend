@@ -29,10 +29,10 @@ th{color:var(--dim);font-weight:600}
 async function load(){
   const c = document.getElementById('content');
   try{
-    const tok = await window.storage.get('tok', false);
-    if(!tok || !tok.value){ c.innerHTML = '<div class="msg">سجّل دخولك أولاً من الصفحة الرئيسية</div>'; return; }
+    const token = localStorage.getItem('tok');
+    if(!token){ c.innerHTML = '<div class="msg">سجّل دخولك أولاً من الصفحة الرئيسية</div>'; return; }
 
-    const r = await fetch('/api/admin/stats', { headers: { Authorization: 'Bearer ' + tok.value } });
+    const r = await fetch('/api/admin/stats', { headers: { Authorization: 'Bearer ' + token } });
     if(r.status === 403){ c.innerHTML = '<div class="msg">هذه الصفحة للمالك فقط</div>'; return; }
     if(!r.ok){ c.innerHTML = '<div class="msg">تعذّر التحميل</div>'; return; }
 
