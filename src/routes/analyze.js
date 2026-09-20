@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db');
+const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -61,17 +61,18 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'الحد الأقصى 6 فريمات بالتحليل الواحد' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
-  if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
-
-  if (!user.is_subscribed && user.analysis_count >= FREE_LIMIT) {
-    return res.status(402).json({
-      error: 'انتهت تحليلاتك المجانية',
-      requiresSubscription: true,
-    });
-  }
-
   try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+    const user = userResult.rows[0];
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+    if (!user.is_subscribed && user.analysis_count >= FREE_LIMIT) {
+      return res.status(402).json({
+        error: 'انتهت تحليلاتك المجانية',
+        requiresSubscription: true,
+      });
+    }
+
     const parts = [{ text: SYSTEM_PROMPT + `\n\nعدد الفريمات المرفقة: ${list.length}. حلّل بدقة وأعد النتيجة بصيغة JSON فقط.` }];
     list.forEach((im) => {
       parts.push({ text: `الفريم الزمني للصورة التالية: ${im.label || 'غير محدد'}` });
@@ -100,8 +101,9 @@ router.post('/', requireAuth, async (req, res) => {
     const clean = rawText.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
-    db.prepare('UPDATE users SET analysis_count = analysis_count + 1 WHERE id = ?').run(user.id);
-    const updated = db.prepare('SELECT analysis_count, is_subscribed FROM users WHERE id = ?').get(user.id);
+    await pool.query('UPDATE users SET analysis_count = analysis_count + 1 WHERE id = $1', [user.id]);
+    const updatedResult = await pool.query('SELECT analysis_count, is_subscribed FROM users WHERE id = $1', [user.id]);
+    const updated = updatedResult.rows[0];
 
     res.json({
       analysis: parsed,
