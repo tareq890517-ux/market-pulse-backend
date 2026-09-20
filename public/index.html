@@ -17,15 +17,22 @@ main{max-width:700px;margin:0 auto;padding:24px 16px}
 .box{border:1px solid var(--ln);background:var(--el);padding:20px;margin-bottom:20px}
 h2{font-size:18px;margin-bottom:6px}
 p.sub{color:var(--dim);font-size:13px;margin-bottom:16px}
-.up{border:1.5px dashed var(--ln);padding:30px;text-align:center;cursor:pointer}
-input,button{width:100%;background:var(--bg);border:1px solid var(--ln);color:var(--tx);padding:10px;margin-bottom:10px;font-size:14px}
+.up{border:1.5px dashed var(--ln);padding:20px;text-align:center;cursor:pointer;font-size:13px}
+input,button,select{width:100%;background:var(--bg);border:1px solid var(--ln);color:var(--tx);padding:10px;margin-bottom:10px;font-size:14px}
 button{background:var(--am);color:#141008;font-weight:600;border:none;cursor:pointer}
+button.gh{background:transparent;color:var(--dim);border:1px solid var(--ln)}
 .gate{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;align-items:center;justify-content:center;padding:20px}
 .hide{display:none}
-.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--ln);font-size:14px}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--ln);font-size:14px;gap:10px}
+.row span:first-child{color:var(--dim);white-space:nowrap}
+.row span:last-child{text-align:left}
 .err{color:var(--rd);font-size:12px;margin-top:8px}
-img#pv{width:100%;max-height:200px;object-fit:contain;margin-bottom:10px}
+img.pv{width:60px;height:40px;object-fit:cover;border:1px solid var(--ln)}
 a{color:var(--am)}
+.slot{display:flex;align-items:center;gap:8px;border:1px solid var(--ln);padding:8px;margin-bottom:8px}
+.slot select{width:100px;margin:0}
+.slot .name{flex:1;font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot button{width:auto;background:none;color:var(--rd);border:none;padding:0 6px;font-size:16px}
 </style>
 </head>
 <body>
@@ -33,7 +40,7 @@ a{color:var(--am)}
 <div class="gate" id="gate">
   <div class="box" style="width:100%;max-width:360px">
     <h2 id="aT">إنشاء حساب</h2>
-    <p class="sub" id="aS">3 تحليلات مجانية</p>
+    <p class="sub" id="aS">تحليلين مجانيين</p>
     <div id="nameF"><input id="nm" placeholder="الاسم"></div>
     <input id="em" placeholder="البريد الإلكتروني" type="email">
     <input id="pw" placeholder="كلمة المرور" type="password">
@@ -57,10 +64,13 @@ a{color:var(--am)}
   <div class="box">
     <h2>حلّل الشارت</h2>
     <p class="sub" id="usage"></p>
-    <div class="up" id="up">اضغط لرفع صورة الشارت</div>
+
+    <div id="slots"></div>
+    <button class="gh" id="addSlot">+ إضافة فريم (صورة)</button>
     <input type="file" id="fi" accept="image/*" class="hide">
-    <img id="pv" class="hide">
-    <button id="an" class="hide">حلّل الآن</button>
+
+    <button id="an" style="margin-top:12px">حلّل الآن</button>
+
     <div id="pay" class="hide box" style="margin-top:10px;text-align:center">
       <p>انتهت تحليلاتك المجانية</p>
       <button onclick="alert('صفحة الاشتراك قريباً')">اشترك</button>
@@ -73,10 +83,12 @@ a{color:var(--am)}
 
 <script>
 const API = '';
-let token = null, uc = 0, sub = false, img = null, mt = 'image/png', login = false;
+let token = null, uc = 0, sub = false, login = false;
+let frames = [];
 
 const gate=document.getElementById('gate'), app=document.getElementById('app');
 const er=document.getElementById('er');
+const TF_OPTIONS = [['5m','5 دقائق'],['15m','15 دقيقة'],['1h','ساعة'],['4h','4 ساعات'],['1D','يوم'],['1W','أسبوع']];
 
 document.getElementById('tg').onclick = e => {
   e.preventDefault();
@@ -90,9 +102,9 @@ document.getElementById('tg').onclick = e => {
 
 async function check(){
   try{
-    const r = await window.storage.get('tok', false);
-    if(r && r.value){
-      token = r.value;
+    const savedToken = localStorage.getItem('tok');
+    if(savedToken){
+      token = savedToken;
       const m = await fetch(API+'/api/me',{headers:{Authorization:'Bearer '+token}});
       if(m.ok){ showApp(await m.json()); return; }
     }
@@ -120,58 +132,89 @@ document.getElementById('go').onclick = async ()=>{
     const d = await r.json();
     if(!r.ok){ er.textContent=d.error||'خطأ'; er.classList.remove('hide'); return; }
     token=d.token;
-    try{await window.storage.set('tok',token,false);}catch(e){}
+    try{localStorage.setItem('tok',token);}catch(e){}
     showApp(d.user);
   }catch(e){ er.textContent='تعذّر الاتصال بالسيرفر'; er.classList.remove('hide'); }
 };
 
 document.getElementById('out').onclick = async ()=>{
-  try{await window.storage.delete('tok',false);}catch(e){}
+  try{localStorage.removeItem('tok');}catch(e){}
   token=null; app.classList.add('hide'); gate.style.display='flex';
 };
 
 function renderU(){
-  document.getElementById('usage').textContent = sub ? 'اشتراك نشط' : `${Math.max(3-uc,0)} من 3 تحليلات متبقية`;
+  document.getElementById('usage').textContent = sub ? 'اشتراك نشط' : `${Math.max(2-uc,0)} من 2 تحليلات متبقية`;
 }
 
-document.getElementById('up').onclick = ()=> document.getElementById('fi').click();
-document.getElementById('fi').onchange = e=>{
-  const f = e.target.files[0]; if(!f) return;
-  mt = f.type;
+function renderSlots(){
+  const wrap = document.getElementById('slots');
+  wrap.innerHTML = '';
+  frames.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'slot';
+    const sel = document.createElement('select');
+    TF_OPTIONS.forEach(([v,l]) => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = l;
+      if (v === f.label) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => { frames[i].label = sel.value; };
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = f.name;
+    const rm = document.createElement('button');
+    rm.textContent = '✕';
+    rm.onclick = () => { frames.splice(i,1); renderSlots(); };
+    div.appendChild(sel); div.appendChild(name); div.appendChild(rm);
+    wrap.appendChild(div);
+  });
+}
+
+document.getElementById('addSlot').onclick = () => {
+  if (frames.length >= 6) { alert('الحد الأقصى 6 فريمات'); return; }
+  document.getElementById('fi').click();
+};
+
+document.getElementById('fi').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
   const rd = new FileReader();
-  rd.onload = ()=>{
-    img = rd.result.split(',')[1];
-    document.getElementById('pv').src = rd.result;
-    document.getElementById('pv').classList.remove('hide');
-    document.getElementById('an').classList.remove('hide');
-    document.getElementById('up').classList.add('hide');
+  rd.onload = () => {
+    frames.push({ label: '1h', base64: rd.result.split(',')[1], mediaType: f.type, name: f.name });
+    renderSlots();
     document.getElementById('res').classList.add('hide');
   };
   rd.readAsDataURL(f);
+  e.target.value = '';
 };
 
 document.getElementById('an').onclick = async ()=>{
+  if (frames.length === 0){ alert('أضف فريم واحد على الأقل'); return; }
   document.getElementById('load').classList.remove('hide');
   document.getElementById('res').classList.add('hide');
   document.getElementById('pay').classList.add('hide');
   try{
-    const r = await fetch(API+'/api/analyze',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({imageBase64:img,mediaType:mt})});
+    const images = frames.map(f => ({ imageBase64: f.base64, mediaType: f.mediaType, label: f.label }));
+    const r = await fetch(API+'/api/analyze',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({images})});
     const d = await r.json();
     if(r.status===402){ document.getElementById('load').classList.add('hide'); document.getElementById('pay').classList.remove('hide'); return; }
     if(!r.ok) throw new Error(d.error);
-    if(typeof d.remaining==='number') uc = 3-d.remaining;
+    if(typeof d.remaining==='number') uc = 2-d.remaining;
     renderU();
     const p = d.analysis;
     document.getElementById('res').innerHTML = `
-      <div class="row"><span>النمط</span><b>${p.pattern||'-'}</b></div>
-      <div class="row"><span>الاتجاه</span><b>${p.trend||'-'}</b></div>
-      <div class="row"><span>دعم/مقاومة</span><b>${p.support||'-'} / ${p.resistance||'-'}</b></div>
-      <div class="row"><span>دخول مقترح</span><b>${p.entry||'-'}</b></div>
-      <div class="row"><span>وقف الخسارة</span><b style="color:var(--rd)">${p.stop_loss||'-'}</b></div>
-      <div class="row"><span>جني الأرباح</span><b style="color:var(--gr)">${p.take_profit||'-'}</b></div>
-      <div class="row"><span>درجة الخطورة</span><b>${p.risk_level||'-'}</b></div>
-      <div class="row"><span>مخاطرة:عائد</span><b>${p.risk_reward||'-'}</b></div>
-      <div class="row"><span>ثقة النمط</span><b>${p.confidence||'-'}</b></div>
+      <div class="row"><span>النمط</span><span>${p.pattern||'-'}</span></div>
+      <div class="row"><span>ملخص الفريمات</span><span>${p.timeframes_summary||'-'}</span></div>
+      <div class="row"><span>الاتجاه العام</span><span>${p.overall_trend||'-'}</span></div>
+      <div class="row"><span>فيبوناتشي</span><span>${p.fibonacci_level||'-'}</span></div>
+      <div class="row"><span>المؤشرات</span><span>${p.indicators_used||'-'}</span></div>
+      <div class="row"><span>دعم/مقاومة</span><span>${p.support||'-'} / ${p.resistance||'-'}</span></div>
+      <div class="row"><span>دخول مقترح</span><span>${p.entry||'-'}</span></div>
+      <div class="row"><span>وقف الخسارة</span><span style="color:var(--rd)">${p.stop_loss||'-'}</span></div>
+      <div class="row"><span>جني الأرباح</span><span style="color:var(--gr)">${p.take_profit||'-'}</span></div>
+      <div class="row"><span>درجة الخطورة</span><span>${p.risk_level||'-'}</span></div>
+      <div class="row"><span>مخاطرة:عائد</span><span>${p.risk_reward||'-'}</span></div>
+      <div class="row"><span>ثقة النمط</span><span>${p.confidence||'-'}</span></div>
     `;
     document.getElementById('load').classList.add('hide');
     document.getElementById('res').classList.remove('hide');
