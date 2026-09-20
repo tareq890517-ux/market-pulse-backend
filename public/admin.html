@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة المالك — نبض السوق</title>
+<style>
+:root{--bg:#0E1A22;--el:#142530;--ln:#26404F;--tx:#E7EEF2;--dim:#8FA6B2;--am:#D9A441;--gr:#4CAF7D}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:sans-serif;padding:20px}
+h1{font-size:20px;margin-bottom:20px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.card{border:1px solid var(--ln);background:var(--el);padding:16px}
+.card .n{font-size:24px;font-weight:700;color:var(--am)}
+.card .l{font-size:12px;color:var(--dim);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px;text-align:right;border-bottom:1px solid var(--ln)}
+th{color:var(--dim);font-weight:600}
+.sub{color:var(--gr)}
+.msg{padding:20px;text-align:center;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<h1>لوحة تحكم المالك</h1>
+<div id="content"><div class="msg">جاري التحميل...</div></div>
+
+<script>
+async function load(){
+  const c = document.getElementById('content');
+  try{
+    const tok = await window.storage.get('tok', false);
+    if(!tok || !tok.value){ c.innerHTML = '<div class="msg">سجّل دخولك أولاً من الصفحة الرئيسية</div>'; return; }
+
+    const r = await fetch('/api/admin/stats', { headers: { Authorization: 'Bearer ' + tok.value } });
+    if(r.status === 403){ c.innerHTML = '<div class="msg">هذه الصفحة للمالك فقط</div>'; return; }
+    if(!r.ok){ c.innerHTML = '<div class="msg">تعذّر التحميل</div>'; return; }
+
+    const d = await r.json();
+    let html = `<div class="cards">
+      <div class="card"><div class="n">${d.total_users}</div><div class="l">إجمالي المستخدمين</div></div>
+      <div class="card"><div class="n">${d.subscribed_users}</div><div class="l">مشتركين</div></div>
+      <div class="card"><div class="n">${d.total_analyses}</div><div class="l">إجمالي التحليلات</div></div>
+    </div>
+    <table><thead><tr><th>الاسم</th><th>البريد</th><th>تحليلات</th><th>الحالة</th></tr></thead><tbody>`;
+    d.recent_users.forEach(u => {
+      html += `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.analysis_count}</td><td>${u.is_subscribed ? '<span class="sub">مشترك</span>' : 'مجاني'}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    c.innerHTML = html;
+  }catch(e){
+    c.innerHTML = '<div class="msg">خطأ في الاتصال بالسيرفر</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>
