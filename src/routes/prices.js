@@ -31,15 +31,4 @@ router.get('/', async (req, res) => {
 
     const forex = [];
     if (fx.rates && fx.rates.EUR) forex.push({ symbol: 'EUR/USD', price: 1 / fx.rates.EUR, change24h: null });
-    if (fx.rates && fx.rates.GBP) forex.push({ symbol: 'GBP/USD', price: 1 / fx.rates.GBP, change24h: null });
-
-    const payload = { crypto, forex, updated_at: new Date().toISOString() };
-    cache = { data: payload, timestamp: now };
-    res.json(payload);
-  } catch (err) {
-    console.error('فشل جلب الأسعار الحية:', err.message);
-    res.status(502).json({ error: 'تعذّر الاتصال بمصدر الأسعار حالياً، حاول لاحقاً' });
-  }
-});
-
-module.exports = router;
+    if (fx.rates && fx.rates.GBP) forex.push({ symbol: 'GBP/USD', price: 1 /
