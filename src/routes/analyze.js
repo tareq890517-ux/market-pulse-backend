@@ -12,7 +12,7 @@ const SYSTEM_PROMPT = `أنت محلل فني محترف للأسواق الما
 - إذا كان الاتجاه هابطاً (قمم وقيعان متناقصة، كسر دعم، شموع حمراء مهيمنة): الصفقة المنطقية هي "بيع" (Short/Sell). في هذه الحالة: سعر الدخول عند مستوى مقاومة أو ارتداد، وقف الخسارة يكون فوق سعر الدخول، وجني الأرباح يكون تحت سعر الدخول عند أقرب دعم.
 - إذا كان الاتجاه صاعداً (قمم وقيعان متزايدة، كسر مقاومة، شموع خضراء مهيمنة): الصفقة المنطقية هي "شراء" (Long/Buy). وقف الخسارة تحت سعر الدخول، وجني الأرباح فوق سعر الدخول عند أقرب مقاومة.
 - إذا كان الاتجاه عرضياً بدون كسر واضح: اختر الاتجاه الأقرب للتحقق (بيع عند أعلى النطاق، شراء عند أسفله) وضح ذلك بحقل pattern.
-لا تفترض "شراء" تلقائياً — حلّل الاتجاه الفعلي أولاً ثم حدد نوع الصفقة بناءً عليه فقط. نصف الصفقات المنطقية إحصائياً تكون بيع، لذا لا تتحيز افتراضياً للشراء.
+لا تفترض "شراء" تلقائياً — حلّل الاتجاه الفعلي أولاً ثم حدد نوع الصفقة بناءً عليه فقط.
 
 قواعد صارمة أخرى:
 1. اعتمد فقط على ما هو ظاهر فعلياً بالصور. لا تخترع رقماً غير مقروء بوضوح — اكتب "غير واضح من الصورة" بدلاً من ذلك.
@@ -28,19 +28,19 @@ const SYSTEM_PROMPT = `أنت محلل فني محترف للأسواق الما
 - أضف حتى +10 إذا وُجدت مؤشرات فنية تدعم القراءة.
 - الناتج بين 15 و95 فقط.
 
-أجب فقط بكائن JSON صالح بالضبط، بدون أي نص إضافي ولا Markdown:
+أجب فقط بكائن JSON صالح بالضبط، بدون أي نص إضافي ولا Markdown ولا علامات اقتباس ثلاثية:
 {
-  "trade_direction": "شراء أو بيع — بناءً على الاتجاه الفعلي المحلَّل فقط",
+  "trade_direction": "شراء أو بيع",
   "pattern": "اسم النمط الفني بالعربية، أو 'غير واضح من الصورة'",
-  "timeframes_summary": "ملخص قراءة كل فريم تم رفعه وكيف أثر على القرار العام",
+  "timeframes_summary": "ملخص قراءة كل فريم تم رفعه",
   "overall_trend": "الاتجاه العام المدمج (صاعد/هابط/عرضي) مع وصف قصير",
   "fibonacci_level": "أقرب مستوى فيبوناتشي فعال حالياً",
   "indicators_used": "المؤشرات الفنية المستخدمة إن وُجدت، وإلا 'حركة السعر فقط'",
   "support": "أقرب مستوى دعم ظاهر فعلياً",
   "resistance": "أقرب مستوى مقاومة ظاهر فعلياً",
-  "entry": "سعر دخول منطقي يطابق نوع الصفقة (trade_direction)",
-  "stop_loss": "سعر وقف خسارة يطابق نوع الصفقة (فوق الدخول للبيع، تحت الدخول للشراء)",
-  "take_profit": "سعر جني أرباح يطابق نوع الصفقة (تحت الدخول للبيع، فوق الدخول للشراء)",
+  "entry": "سعر دخول منطقي يطابق نوع الصفقة",
+  "stop_loss": "سعر وقف خسارة يطابق نوع الصفقة",
+  "take_profit": "سعر جني أرباح يطابق نوع الصفقة",
   "risk_level": "منخفضة أو متوسطة أو عالية",
   "risk_reward_label": "good أو warn أو bad",
   "confidence": "رقم محسوب فعلياً حسب المعايير أعلاه، بصيغة 'XX%'",
@@ -75,31 +75,47 @@ router.post('/', requireAuth, async (req, res) => {
       });
     }
 
-    const parts = [{ text: SYSTEM_PROMPT + `\n\nعدد الفريمات المرفقة: ${list.length}. حلّل بدقة وأعد النتيجة بصيغة JSON فقط.` }];
+    const content = [
+      { type: 'text', text: SYSTEM_PROMPT + `\n\nعدد الفريمات المرفقة: ${list.length}. حلّل بدقة وأعد النتيجة بصيغة JSON فقط.` },
+    ];
     list.forEach((im) => {
-      parts.push({ text: `الفريم الزمني للصورة التالية: ${im.label || 'غير محدد'}` });
-      parts.push({ inline_data: { mime_type: im.mediaType || 'image/png', data: im.imageBase64 } });
+      content.push({ type: 'text', text: `الفريم الزمني للصورة التالية: ${im.label || 'غير محدد'}` });
+      content.push({
+        type: 'image_url',
+        image_url: { url: `data:${im.mediaType || 'image/png'};base64,${im.imageBase64}` },
+      });
     });
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { temperature: 0.4 },
-        }),
-      }
-    );
+    const GLM_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
+    let glmRes, data;
+    const maxAttempts = 3;
 
-    const data = await geminiRes.json();
-    if (!geminiRes.ok) {
-      console.error('خطأ من Gemini API:', data);
-      return res.status(502).json({ error: 'تعذّر تحليل الصورة حالياً' });
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      glmRes = await fetch(GLM_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.ZHIPU_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'glm-4v-flash',
+          messages: [{ role: 'user', content }],
+        }),
+      });
+
+      data = await glmRes.json();
+
+      if (glmRes.ok) break;
+
+      console.error(`خطأ من GLM API (محاولة ${attempt}/${maxAttempts}):`, data);
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, attempt * 1500));
+        continue;
+      }
+      return res.status(502).json({ error: 'تعذّر تحليل الصورة حالياً، حاول مرة أخرى' });
     }
 
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const rawText = data.choices?.[0]?.message?.content || '{}';
     const clean = rawText.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
