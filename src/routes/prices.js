@@ -1,34 +1,28 @@
 const express = require('express');
+const { pool } = require('../db');
+const { requireAuth } = require('../middleware/auth');
+
 const router = express.Router();
+const FREE_LIMIT = 2;
 
-let cache = { data: null, timestamp: 0 };
-const CACHE_MS = 30 * 1000;
-
-router.get('/', async (req, res) => {
-  const now = Date.now();
-  if (cache.data && now - cache.timestamp < CACHE_MS) {
-    return res.json(cache.data);
-  }
-
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const [cgRes, fxRes] = await Promise.all([
-      fetch(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&price_change_percentage=24h'
-      ),
-      fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP'),
-    ]);
+    const result = await pool.query(
+      'SELECT id, name, email, is_subscribed, analysis_count FROM users WHERE id = $1',
+      [req.userId]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
-    const coins = await cgRes.json();
-    const fx = await fxRes.json();
+    res.json({
+      ...user,
+      is_subscribed: !!user.is_subscribed,
+      remaining: user.is_subscribed ? null : Math.max(FREE_LIMIT - user.analysis_count, 0),
+    });
+  } catch (err) {
+    console.error('خطأ me:', err.message);
+    res.status(500).json({ error: 'حدث خطأ غير متوقع' });
+  }
+});
 
-    const crypto = Array.isArray(coins)
-      ? coins.map((c) => ({
-          symbol: c.symbol.toUpperCase() + '/USD',
-          price: c.current_price,
-          change24h: c.price_change_percentage_24h,
-        }))
-      : [];
-
-    const forex = [];
-    if (fx.rates && fx.rates.EUR) forex.push({ symbol: 'EUR/USD', price: 1 / fx.rates.EUR, change24h: null });
-    if (fx.rates && fx.rates.GBP) forex.push({ symbol: 'GBP/USD', price: 1 /
+module.exports = router;
