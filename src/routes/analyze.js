@@ -66,7 +66,9 @@ router.post('/', requireAuth, async (req, res) => {
     const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
-    if (!user.is_subscribed && user.analysis_count >= FREE_LIMIT) {
+    const isAdmin = (process.env.ADMIN_EMAIL || '').toLowerCase() === (user.email || '').toLowerCase();
+
+    if (!isAdmin && !user.is_subscribed && user.analysis_count >= FREE_LIMIT) {
       return res.status(402).json({
         error: 'انتهت تحليلاتك المجانية',
         requiresSubscription: true,
@@ -107,7 +109,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.json({
       analysis: parsed,
-      remaining: updated.is_subscribed ? null : Math.max(FREE_LIMIT - updated.analysis_count, 0),
+      remaining: (isAdmin || updated.is_subscribed) ? null : Math.max(FREE_LIMIT - updated.analysis_count, 0),
     });
   } catch (err) {
     console.error('فشل تحليل الشارت:', err.message);
