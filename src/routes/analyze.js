@@ -109,11 +109,15 @@ router.post('/', requireAuth, async (req, res) => {
       if (apiRes.ok) break;
 
       console.error(`خطأ من Groq API (محاولة ${attempt}/${maxAttempts}):`, data);
+
       if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, attempt * 1500));
+        const msg = data?.error?.message || '';
+        const match = msg.match(/try again in ([\d.]+)s/i);
+        const waitSeconds = match ? Math.min(parseFloat(match[1]) + 1, 60) : attempt * 2;
+        await new Promise((r) => setTimeout(r, waitSeconds * 1000));
         continue;
       }
-      return res.status(502).json({ error: 'تعذّر تحليل الصورة حالياً، حاول مرة أخرى' });
+      return res.status(502).json({ error: 'الخدمة مزدحمة حالياً، حاول خلال دقيقة' });
     }
 
     const rawText = data.choices?.[0]?.message?.content || '{}';
