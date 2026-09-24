@@ -57,7 +57,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (list.length === 0) {
     return res.status(400).json({ error: 'لم تُرسَل أي صورة' });
   }
-  if (list.length > 6) {
+  if (list.length > 2) {
     return res.status(400).json({ error: 'الحد الأقصى 6 فريمات بالتحليل الواحد' });
   }
 
