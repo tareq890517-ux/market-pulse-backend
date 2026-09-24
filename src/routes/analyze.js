@@ -86,28 +86,24 @@ router.post('/', requireAuth, async (req, res) => {
       });
     });
 
-    const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    const apiRes = await fetch(GROQ_URL, {
+    const GLM_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
+    const glmRes = await fetch(GLM_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.ZHIPU_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.8-27b',
+        model: 'glm-4.6v-flash',
         messages: [{ role: 'user', content }],
-        max_tokens: 900,
       }),
     });
 
-    const data = await apiRes.json();
+    const data = await glmRes.json();
 
-    if (!apiRes.ok) {
-      console.error('خطأ من Groq API:', data);
-      const msg = data?.error?.message || '';
-      const match = msg.match(/try again in ([\d.]+)s/i);
-      const retryAfter = match ? Math.ceil(parseFloat(match[1])) + 1 : 5;
-      return res.status(429).json({ error: 'الخدمة مزدحمة حالياً، جاري إعادة المحاولة تلقائياً...', retryAfter });
+    if (!glmRes.ok) {
+      console.error('خطأ من GLM API:', data);
+      return res.status(429).json({ error: 'الخدمة مزدحمة حالياً، حاول خلال دقيقة', retryAfter: 15 });
     }
 
     const rawText = data.choices?.[0]?.message?.content || '{}';
