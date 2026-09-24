@@ -205,7 +205,7 @@ function renderSlots(){
 }
 
 document.getElementById('addSlot').onclick = () => {
-  if (frames.length >= 6) { alert('الحد الأقصى 6 فريمات'); return; }
+  if (frames.length >= 2) { alert('الحد الأقصى فريمين بكل تحليل (بسبب حدود الخدمة المجانية)'); return; }
   document.getElementById('fi').click();
 };
 
@@ -217,14 +217,14 @@ function compressImage(file){
     const reader = new FileReader();
     reader.onload = () => {
       img.onload = () => {
-        const maxW = 1280;
+        const maxW = 768;
         const scale = Math.min(1, maxW / img.width);
         const canvas = document.createElement('canvas');
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
         resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
       };
       img.onerror = reject;
