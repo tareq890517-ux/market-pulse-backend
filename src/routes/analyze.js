@@ -87,37 +87,27 @@ router.post('/', requireAuth, async (req, res) => {
     });
 
     const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    let apiRes, data;
-    const maxAttempts = 3;
+    const apiRes = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen/qwen3.8-27b',
+        messages: [{ role: 'user', content }],
+        max_tokens: 900,
+      }),
+    });
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      apiRes = await fetch(GROQ_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'qwen/qwen3.8-27b',
-          messages: [{ role: 'user', content }],
-          max_tokens: 900,
-        }),
-      });
+    const data = await apiRes.json();
 
-      data = await apiRes.json();
-
-      if (apiRes.ok) break;
-
-      console.error(`خطأ من Groq API (محاولة ${attempt}/${maxAttempts}):`, data);
-
-      if (attempt < maxAttempts) {
-        const msg = data?.error?.message || '';
-        const match = msg.match(/try again in ([\d.]+)s/i);
-        const waitSeconds = match ? Math.min(parseFloat(match[1]) + 1, 60) : attempt * 2;
-        await new Promise((r) => setTimeout(r, waitSeconds * 1000));
-        continue;
-      }
-      return res.status(502).json({ error: 'الخدمة مزدحمة حالياً، حاول خلال دقيقة' });
+    if (!apiRes.ok) {
+      console.error('خطأ من Groq API:', data);
+      const msg = data?.error?.message || '';
+      const match = msg.match(/try again in ([\d.]+)s/i);
+      const retryAfter = match ? Math.ceil(parseFloat(match[1])) + 1 : 5;
+      return res.status(429).json({ error: 'الخدمة مزدحمة حالياً، جاري إعادة المحاولة تلقائياً...', retryAfter });
     }
 
     const rawText = data.choices?.[0]?.message?.content || '{}';
