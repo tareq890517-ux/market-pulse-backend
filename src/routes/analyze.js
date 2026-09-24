@@ -98,7 +98,7 @@ router.post('/', requireAuth, async (req, res) => {
           Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'qwen/qwen3.6-27b',
+          model: 'qwen3.8-27b',
           messages: [{ role: 'user', content }],
         }),
       });
