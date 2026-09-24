@@ -108,6 +108,52 @@ const API = '';
 let token = null, uc = 0, sub = false, login = false;
 let frames = []; // {label, base64, mediaType, name}
 
+const TRANSLATIONS = {
+  ar: {
+    brandTitle: 'نبض السوق', logout: 'خروج', createAccount: 'إنشاء حساب',
+    oneFree: 'تحليل واحد مجاني', createAccountBtn: 'إنشاء الحساب', haveAccount: 'لديك حساب؟', login: 'دخول',
+    analyzeTitle: 'حلّل الشارت', addFrame: '+ إضافة فريم (صورة)', analyzeNow: 'حلّل الآن',
+    submitPay: 'إرسال طلب التفعيل', freeEnded: 'انتهت تحليلاتك المجانية — اشترك للمتابعة',
+    name: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', txHash: 'رقم عملية التحويل (Tx Hash)',
+    loginTitle: 'تسجيل الدخول', loginSub: 'أهلاً بعودتك', noAccount: 'ما عندك حساب؟', newAccount: 'إنشاء حساب جديد', activeSub: 'اشتراك نشط', remaining1: 'من 1 تحليل متبقي', remaining0: 'من 1 تحليل متبقي', btcWallet: 'عنوان محفظة BTC:', usdtWallet: 'عنوان محفظة USDT (BEP20):',
+  },
+  en: {
+    brandTitle: 'Market Pulse', logout: 'Logout', createAccount: 'Create Account',
+    oneFree: 'One free analysis', createAccountBtn: 'Create Account', haveAccount: 'Have an account?', login: 'Login',
+    analyzeTitle: 'Analyze Chart', addFrame: '+ Add Timeframe (image)', analyzeNow: 'Analyze Now',
+    submitPay: 'Submit Activation Request', freeEnded: 'Your free analysis is used — subscribe to continue',
+    name: 'Name', email: 'Email', password: 'Password', txHash: 'Transaction Hash',
+    loginTitle: 'Login', loginSub: 'Welcome back', noAccount: "Don't have an account?", newAccount: 'Create new account', activeSub: 'Active subscription', remaining1: 'of 1 free analysis left', remaining0: 'of 1 free analysis left', btcWallet: 'BTC Wallet Address:', usdtWallet: 'USDT (BEP20) Wallet Address:',
+  }
+};
+
+let currentLang = 'ar';
+
+function applyLang(){
+  const t = TRANSLATIONS[currentLang];
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('langBtn').textContent = currentLang === 'ar' ? 'EN' : 'عربي';
+
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.getAttribute('data-t');
+    if (t[key]) el.textContent = t[key];
+  });
+  document.querySelectorAll('[data-tp]').forEach(el => {
+    const key = el.getAttribute('data-tp');
+    if (t[key]) el.placeholder = t[key];
+  });
+
+  if (login){
+    document.getElementById('aT').textContent = t.loginTitle;
+    document.getElementById('go').textContent = t.login;
+    document.getElementById('tt').textContent = t.noAccount;
+    document.getElementById('tg').textContent = t.newAccount;
+  }
+  renderU();
+  updateWalletDisplay();
+}
+
 const gate=document.getElementById('gate'), app=document.getElementById('app');
 const er=document.getElementById('er');
 const TF_OPTIONS = [['5m','5 دقائق'],['15m','15 دقيقة'],['1h','ساعة'],['4h','4 ساعات'],['1D','يوم'],['1W','أسبوع']];
@@ -331,52 +377,6 @@ document.getElementById('submitPay').onclick = async ()=>{
     document.getElementById('txHash').value = '';
   }catch(e){ msg.textContent = 'تعذّر الاتصال بالسيرفر'; msg.style.color = 'var(--rd)'; }
 };
-
-const TRANSLATIONS = {
-  ar: {
-    brandTitle: 'نبض السوق', logout: 'خروج', createAccount: 'إنشاء حساب',
-    oneFree: 'تحليل واحد مجاني', createAccountBtn: 'إنشاء الحساب', haveAccount: 'لديك حساب؟', login: 'دخول',
-    analyzeTitle: 'حلّل الشارت', addFrame: '+ إضافة فريم (صورة)', analyzeNow: 'حلّل الآن',
-    submitPay: 'إرسال طلب التفعيل', freeEnded: 'انتهت تحليلاتك المجانية — اشترك للمتابعة',
-    name: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', txHash: 'رقم عملية التحويل (Tx Hash)',
-    loginTitle: 'تسجيل الدخول', loginSub: 'أهلاً بعودتك', noAccount: 'ما عندك حساب؟', newAccount: 'إنشاء حساب جديد', activeSub: 'اشتراك نشط', remaining1: 'من 1 تحليل متبقي', remaining0: 'من 1 تحليل متبقي', btcWallet: 'عنوان محفظة BTC:', usdtWallet: 'عنوان محفظة USDT (BEP20):',
-  },
-  en: {
-    brandTitle: 'Market Pulse', logout: 'Logout', createAccount: 'Create Account',
-    oneFree: 'One free analysis', createAccountBtn: 'Create Account', haveAccount: 'Have an account?', login: 'Login',
-    analyzeTitle: 'Analyze Chart', addFrame: '+ Add Timeframe (image)', analyzeNow: 'Analyze Now',
-    submitPay: 'Submit Activation Request', freeEnded: 'Your free analysis is used — subscribe to continue',
-    name: 'Name', email: 'Email', password: 'Password', txHash: 'Transaction Hash',
-    loginTitle: 'Login', loginSub: 'Welcome back', noAccount: "Don't have an account?", newAccount: 'Create new account', activeSub: 'Active subscription', remaining1: 'of 1 free analysis left', remaining0: 'of 1 free analysis left', btcWallet: 'BTC Wallet Address:', usdtWallet: 'USDT (BEP20) Wallet Address:',
-  }
-};
-
-let currentLang = 'ar';
-
-function applyLang(){
-  const t = TRANSLATIONS[currentLang];
-  document.documentElement.lang = currentLang;
-  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-  document.getElementById('langBtn').textContent = currentLang === 'ar' ? 'EN' : 'عربي';
-
-  document.querySelectorAll('[data-t]').forEach(el => {
-    const key = el.getAttribute('data-t');
-    if (t[key]) el.textContent = t[key];
-  });
-  document.querySelectorAll('[data-tp]').forEach(el => {
-    const key = el.getAttribute('data-tp');
-    if (t[key]) el.placeholder = t[key];
-  });
-
-  if (login){
-    document.getElementById('aT').textContent = t.loginTitle;
-    document.getElementById('go').textContent = t.login;
-    document.getElementById('tt').textContent = t.noAccount;
-    document.getElementById('tg').textContent = t.newAccount;
-  }
-  renderU();
-  updateWalletDisplay();
-}
 
 document.getElementById('langBtn').onclick = () => {
   currentLang = currentLang === 'ar' ? 'en' : 'ar';
