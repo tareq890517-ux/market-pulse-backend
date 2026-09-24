@@ -3,7 +3,7 @@ const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
-const FREE_LIMIT = 2;
+const FREE_LIMIT = 1;
 
 router.get('/', requireAuth, async (req, res) => {
   try {
