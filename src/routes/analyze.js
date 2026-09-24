@@ -86,28 +86,28 @@ router.post('/', requireAuth, async (req, res) => {
       });
     });
 
-    const GLM_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
-    let glmRes, data;
+    const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    let apiRes, data;
     const maxAttempts = 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      glmRes = await fetch(GLM_URL, {
+      apiRes = await fetch(GROQ_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.ZHIPU_API_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'glm-4.6v-flash',
+          model: 'qwen/qwen3.6-27b',
           messages: [{ role: 'user', content }],
         }),
       });
 
-      data = await glmRes.json();
+      data = await apiRes.json();
 
-      if (glmRes.ok) break;
+      if (apiRes.ok) break;
 
-      console.error(`خطأ من GLM API (محاولة ${attempt}/${maxAttempts}):`, data);
+      console.error(`خطأ من Groq API (محاولة ${attempt}/${maxAttempts}):`, data);
       if (attempt < maxAttempts) {
         await new Promise((r) => setTimeout(r, attempt * 1500));
         continue;
