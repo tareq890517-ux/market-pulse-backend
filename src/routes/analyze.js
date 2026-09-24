@@ -86,24 +86,24 @@ router.post('/', requireAuth, async (req, res) => {
       });
     });
 
-    const GLM_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
-    const glmRes = await fetch(GLM_URL, {
+    const MIXROUTE_URL = 'https://api.mixroute.ai/v1/chat/completions';
+    const apiRes = await fetch(MIXROUTE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.ZHIPU_API_KEY}`,
+        Authorization: `Bearer ${process.env.MIXROUTE_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'glm-4.6v-flash',
+        model: 'gpt-4.1-mini',
         messages: [{ role: 'user', content }],
       }),
     });
 
-    const data = await glmRes.json();
+    const data = await apiRes.json();
 
-    if (!glmRes.ok) {
-      console.error('خطأ من GLM API:', data);
-      return res.status(429).json({ error: 'الخدمة مزدحمة حالياً، حاول خلال دقيقة', retryAfter: 15 });
+    if (!apiRes.ok) {
+      console.error('خطأ من MixRoute API:', data);
+      return res.status(502).json({ error: 'تعذّر تحليل الصورة حالياً، حاول مرة أخرى' });
     }
 
     const rawText = data.choices?.[0]?.message?.content || '{}';
