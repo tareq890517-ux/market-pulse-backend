@@ -39,45 +39,46 @@ a{color:var(--am)}
 
 <div class="gate" id="gate">
   <div class="box" style="width:100%;max-width:360px">
-    <h2 id="aT">إنشاء حساب</h2>
-    <p class="sub" id="aS">تحليلين مجانيين</p>
-    <div id="nameF"><input id="nm" placeholder="الاسم"></div>
-    <input id="em" placeholder="البريد الإلكتروني" type="email">
-    <input id="pw" placeholder="كلمة المرور" type="password">
-    <button id="go">إنشاء الحساب</button>
+    <h2 id="aT" data-t="createAccount">إنشاء حساب</h2>
+    <p class="sub" id="aS" data-t="oneFree">تحليل واحد مجاني</p>
+    <div id="nameF"><input id="nm" placeholder="الاسم" data-tp="name"></div>
+    <input id="em" placeholder="البريد الإلكتروني" type="email" data-tp="email">
+    <input id="pw" placeholder="كلمة المرور" type="password" data-tp="password">
+    <button id="go" data-t="createAccountBtn">إنشاء الحساب</button>
     <div class="err hide" id="er"></div>
-    <p class="sub"><span id="tt">لديك حساب؟</span> <a href="#" id="tg">دخول</a></p>
+    <p class="sub"><span id="tt" data-t="haveAccount">لديك حساب؟</span> <a href="#" id="tg" data-t="login">دخول</a></p>
   </div>
 </div>
 
 <div id="app" class="hide">
 <header>
-  <h1>نبض السوق</h1>
+  <h1 id="brandTitle">نبض السوق</h1>
   <div>
+    <button id="langBtn" style="width:auto;background:none;color:var(--am);border:1px solid var(--ln);padding:4px 8px;font-size:12px;margin-left:8px">EN</button>
     <span id="who" style="font-size:13px;color:var(--dim)"></span>
-    <button id="out" style="width:auto;background:none;color:var(--dim);text-decoration:underline;padding:4px">خروج</button>
+    <button id="out" style="width:auto;background:none;color:var(--dim);text-decoration:underline;padding:4px" data-t="logout">خروج</button>
   </div>
 </header>
 <div class="tick-wrap"><div class="tick" id="tk">جاري التحميل...</div></div>
 
 <main>
   <div class="box">
-    <h2>حلّل الشارت</h2>
+    <h2 data-t="analyzeTitle">حلّل الشارت</h2>
     <p class="sub" id="usage"></p>
 
     <div id="slots"></div>
-    <button class="gh" id="addSlot">+ إضافة فريم (صورة)</button>
+    <button class="gh" id="addSlot" data-t="addFrame">+ إضافة فريم (صورة)</button>
     <input type="file" id="fi" accept="image/*" class="hide">
 
-    <button id="an" style="margin-top:12px">حلّل الآن</button>
+    <button id="an" style="margin-top:12px" data-t="analyzeNow">حلّل الآن</button>
 
     <div id="pay" class="hide box" style="margin-top:10px">
-      <p style="text-align:center;margin-bottom:14px">انتهت تحليلاتك المجانية — اشترك للمتابعة</p>
+      <p style="text-align:center;margin-bottom:14px" data-t="freeEnded">انتهت تحليلاتك المجانية — اشترك للمتابعة</p>
 
       <select id="planSel">
         <option value="1m">شهر واحد — 20$</option>
         <option value="2m">شهرين — 35$</option>
-        <option value="6m">ستة أشهر — 80$</option>
+        <option value="6m">ستة أشهر — 100$</option>
         <option value="1y">سنة كاملة — 150$</option>
       </select>
 
@@ -92,8 +93,8 @@ a{color:var(--am)}
       </div>
       <p class="sub">حوّل المبلغ المطابق للباقة المختارة للعنوان أعلاه، ثم أدخل رقم عملية التحويل (Transaction Hash) بالأسفل.</p>
 
-      <input id="txHash" placeholder="رقم عملية التحويل (Tx Hash)">
-      <button id="submitPay">إرسال طلب التفعيل</button>
+      <input id="txHash" placeholder="رقم عملية التحويل (Tx Hash)" data-tp="txHash">
+      <button id="submitPay" data-t="submitPay">إرسال طلب التفعيل</button>
       <div id="payMsg" class="sub" style="margin-top:8px"></div>
     </div>
     <div id="load" class="hide sub">جاري التحليل...</div>
@@ -105,7 +106,7 @@ a{color:var(--am)}
 <script>
 const API = '';
 let token = null, uc = 0, sub = false, login = false;
-let frames = [];
+let frames = []; // {label, base64, mediaType, name}
 
 const gate=document.getElementById('gate'), app=document.getElementById('app');
 const er=document.getElementById('er');
@@ -174,7 +175,8 @@ document.getElementById('out').onclick = async ()=>{
 };
 
 function renderU(){
-  document.getElementById('usage').textContent = sub ? 'اشتراك نشط' : `${Math.max(2-uc,0)} من 2 تحليلات متبقية`;
+  const t = TRANSLATIONS[currentLang];
+  document.getElementById('usage').textContent = sub ? t.activeSub : `${Math.max(1-uc,0)} ${t.remaining1}`;
 }
 
 function renderSlots(){
@@ -189,7 +191,7 @@ function renderSlots(){
       o.value = v; o.textContent = l;
       if (v === f.label) o.selected = true;
       sel.appendChild(o);
-    });
+      });
     sel.onchange = () => { frames[i].label = sel.value; };
     const name = document.createElement('span');
     name.className = 'name';
@@ -207,6 +209,8 @@ document.getElementById('addSlot').onclick = () => {
   document.getElementById('fi').click();
 };
 
+// نضغط الصورة قبل الإرسال (أبعاد أصغر + جودة JPEG معقولة) لتفادي تجاوز حجم الطلب
+// عند رفع عدة فريمات مع بعض
 function compressImage(file){
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -255,7 +259,7 @@ document.getElementById('an').onclick = async ()=>{
     const d = await r.json();
     if(r.status===402){ document.getElementById('load').classList.add('hide'); document.getElementById('pay').classList.remove('hide'); return; }
     if(!r.ok) throw new Error(d.error);
-    if(typeof d.remaining==='number') uc = 2-d.remaining;
+    if(typeof d.remaining==='number') uc = 1-d.remaining;
     renderU();
     const p = d.analysis;
     document.getElementById('res').innerHTML = `
@@ -298,8 +302,9 @@ const WALLETS = {
 };
 
 function updateWalletDisplay(){
+  const t = TRANSLATIONS[currentLang];
   const method = document.getElementById('methodSel').value;
-  document.getElementById('walletLabel').textContent = method === 'BTC' ? 'عنوان محفظة BTC:' : 'عنوان محفظة USDT (BEP20):';
+  document.getElementById('walletLabel').textContent = method === 'BTC' ? t.btcWallet : t.usdtWallet;
   document.getElementById('walletAddr').textContent = WALLETS[method];
 }
 document.getElementById('methodSel').addEventListener('change', updateWalletDisplay);
@@ -320,7 +325,59 @@ document.getElementById('submitPay').onclick = async ()=>{
   }catch(e){ msg.textContent = 'تعذّر الاتصال بالسيرفر'; msg.style.color = 'var(--rd)'; }
 };
 
+const TRANSLATIONS = {
+  ar: {
+    brandTitle: 'نبض السوق', logout: 'خروج', createAccount: 'إنشاء حساب',
+    oneFree: 'تحليل واحد مجاني', createAccountBtn: 'إنشاء الحساب', haveAccount: 'لديك حساب؟', login: 'دخول',
+    analyzeTitle: 'حلّل الشارت', addFrame: '+ إضافة فريم (صورة)', analyzeNow: 'حلّل الآن',
+    submitPay: 'إرسال طلب التفعيل', freeEnded: 'انتهت تحليلاتك المجانية — اشترك للمتابعة',
+    name: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', txHash: 'رقم عملية التحويل (Tx Hash)',
+    loginTitle: 'تسجيل الدخول', loginSub: 'أهلاً بعودتك', noAccount: 'ما عندك حساب؟', newAccount: 'إنشاء حساب جديد', activeSub: 'اشتراك نشط', remaining1: 'من 1 تحليل متبقي', remaining0: 'من 1 تحليل متبقي', btcWallet: 'عنوان محفظة BTC:', usdtWallet: 'عنوان محفظة USDT (BEP20):',
+  },
+  en: {
+    brandTitle: 'Market Pulse', logout: 'Logout', createAccount: 'Create Account',
+    oneFree: 'One free analysis', createAccountBtn: 'Create Account', haveAccount: 'Have an account?', login: 'Login',
+    analyzeTitle: 'Analyze Chart', addFrame: '+ Add Timeframe (image)', analyzeNow: 'Analyze Now',
+    submitPay: 'Submit Activation Request', freeEnded: 'Your free analysis is used — subscribe to continue',
+    name: 'Name', email: 'Email', password: 'Password', txHash: 'Transaction Hash',
+    loginTitle: 'Login', loginSub: 'Welcome back', noAccount: "Don't have an account?", newAccount: 'Create new account', activeSub: 'Active subscription', remaining1: 'of 1 free analysis left', remaining0: 'of 1 free analysis left', btcWallet: 'BTC Wallet Address:', usdtWallet: 'USDT (BEP20) Wallet Address:',
+  }
+};
+
+let currentLang = 'ar';
+
+function applyLang(){
+  const t = TRANSLATIONS[currentLang];
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('langBtn').textContent = currentLang === 'ar' ? 'EN' : 'عربي';
+
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.getAttribute('data-t');
+    if (t[key]) el.textContent = t[key];
+  });
+  document.querySelectorAll('[data-tp]').forEach(el => {
+    const key = el.getAttribute('data-tp');
+    if (t[key]) el.placeholder = t[key];
+  });
+
+  if (login){
+    document.getElementById('aT').textContent = t.loginTitle;
+    document.getElementById('go').textContent = t.login;
+    document.getElementById('tt').textContent = t.noAccount;
+    document.getElementById('tg').textContent = t.newAccount;
+  }
+  renderU();
+  updateWalletDisplay();
+}
+
+document.getElementById('langBtn').onclick = () => {
+  currentLang = currentLang === 'ar' ? 'en' : 'ar';
+  applyLang();
+};
+
 check();
+applyLang();
 ticker();
 setInterval(ticker,60000);
 </script>
