@@ -57,8 +57,8 @@ router.post('/', requireAuth, async (req, res) => {
   if (list.length === 0) {
     return res.status(400).json({ error: 'لم تُرسَل أي صورة' });
   }
-  if (list.length > 2) {
-    return res.status(400).json({ error: 'الحد الأقصى 6 فريمات بالتحليل الواحد' });
+  if (list.length > 1) {
+    return res.status(400).json({ error: 'الحد الأقصى صورة واحدة بالتحليل الواحد' });
   }
 
   try {
@@ -98,10 +98,11 @@ router.post('/', requireAuth, async (req, res) => {
           Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-       model: 'qwen/qwen3.8-27b',
+          model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content }],
           max_tokens: 900,
-        }), 
+        }),
+      });
 
       data = await apiRes.json();
 
