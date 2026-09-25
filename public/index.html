@@ -154,6 +154,12 @@ function applyLang(){
   updateWalletDisplay();
 }
 
+document.getElementById('langBtn').onclick = () => {
+  currentLang = currentLang === 'ar' ? 'en' : 'ar';
+  applyLang();
+};
+
+
 const gate=document.getElementById('gate'), app=document.getElementById('app');
 const er=document.getElementById('er');
 const TF_OPTIONS = [['5m','5 دقائق'],['15m','15 دقيقة'],['1h','ساعة'],['4h','4 ساعات'],['1D','يوم'],['1W','أسبوع']];
@@ -224,8 +230,7 @@ function renderU(){
   const t = TRANSLATIONS[currentLang];
   document.getElementById('usage').textContent = sub ? t.activeSub : `${Math.max(1-uc,0)} ${t.remaining1}`;
 }
-
-function renderSlots(){
+  function renderSlots(){
   const wrap = document.getElementById('slots');
   wrap.innerHTML = '';
   frames.forEach((f, i) => {
@@ -378,15 +383,24 @@ document.getElementById('submitPay').onclick = async ()=>{
   }catch(e){ msg.textContent = 'تعذّر الاتصال بالسيرفر'; msg.style.color = 'var(--rd)'; }
 };
 
-document.getElementById('langBtn').onclick = () => {
-  currentLang = currentLang === 'ar' ? 'en' : 'ar';
-  applyLang();
-};
-
 check();
 applyLang();
 ticker();
 setInterval(ticker,60000);
 </script>
+
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6ab643ee5727b8343a8690da/1k3bvin5j';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
+<!--End of Tawk.to Script-->
 </body>
 </html>
